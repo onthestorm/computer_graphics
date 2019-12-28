@@ -4,6 +4,7 @@
 
 #include <GL/freeglut.h>
 #include <GL/glaux.h>
+#include <CImg.h>
 
 void init();
 void display();
@@ -13,7 +14,6 @@ void draw4();
 void reshape(int w, int h);
 void keyboard(unsigned char key, int x, int y);
 void loop(int time);
-void loadTextures();
 
 GLfloat diverge = 0.02;
 GLfloat AlphaChannel = 1;
@@ -28,7 +28,16 @@ GLfloat angle_x = 0;
 GLfloat angle_y = 0;
 
 GLuint cube;
-GLuint texture[8];
+
+typedef struct T_GL_DATA {
+    size_t width, height;
+    unsigned char *data;
+} TGL;
+
+GLuint textures[8];
+TGL texts[8];
+
+using namespace cimg_library;
 
 
 int main(int argc, char** argv) {
@@ -65,8 +74,7 @@ void init() {
     glEnable(GL_BLEND); //Enable blending.
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
 
-    loadTextures();
-    glEnable(GL_TEXTURE_2D);
+
 
     cube = glGenLists(1);
     draw_cube();
@@ -110,38 +118,38 @@ void draw3() {
     glVertex3f( 0+diverge, 0+diverge, 1+diverge);
 
 
-    glColor4f(1.0,0.9,0.0, AlphaChannel);
+    glColor4f(1.0,0.0,0.0, AlphaChannel);
     glNormal3f(-1,1,-1);
     glVertex3f( 1 + diverge, 0-diverge, 0+diverge);
     glVertex3f( 0 + diverge,-1-diverge, 0+diverge);
     glVertex3f( 0+ diverge, 0-diverge, 1+diverge);
 
 
-    glColor4f(0.8,0.0,0.8, AlphaChannel);
+    glColor4f(1.0,0.0,0.0, AlphaChannel);
     glNormal3f(-1,-1,1);
     glVertex3f(-1-diverge, 0-diverge, 0+diverge);
     glVertex3f( 0-diverge,-1-diverge, 0+diverge);
     glVertex3f( 0-diverge, 0-diverge, 1+diverge);
 
-    glColor4f(0.0,1.0,0.0, AlphaChannel);
+    glColor4f(0.0,0.0,1.0, AlphaChannel);
     glNormal3f(1,-1,-1);
     glVertex3f(-1-diverge, 0+diverge, 0+diverge);
     glVertex3f( 0-diverge, 1+diverge, 0+diverge);
     glVertex3f( 0-diverge, 0+diverge, 1+diverge);
 
-    glColor4f(0.0,0.9,0.9, AlphaChannel);
+    glColor4f(0.0,1.0,1.0, AlphaChannel);
     glNormal3f(-1,-1,1);
     glVertex3f( 1+diverge, 0+diverge, 0-diverge);
     glVertex3f( 0+diverge, 1+diverge, 0-diverge);
     glVertex3f( 0+diverge, 0+diverge,-1-diverge);
 
-    glColor4f(0.0,0.0,1.0, AlphaChannel);
+    glColor4f(0.7,1.0,0.2, AlphaChannel);
     glNormal3f(1,-1,-1);
     glVertex3f( 1+diverge, 0-diverge, 0-diverge);
     glVertex3f( 0+diverge,-1-diverge, 0-diverge);
     glVertex3f( 0+diverge, 0-diverge,-1-diverge);
 
-    glColor4f(1.0,0.0,0.0, AlphaChannel);
+    glColor4f(1.0,0.0,0.5, AlphaChannel);
     glNormal3f(1,1,1);
     glVertex3f(-1-diverge, 0-diverge, 0-diverge);
     glVertex3f( 0-diverge,-1-diverge, 0-diverge);
@@ -161,69 +169,133 @@ void draw3() {
 }
 
 void draw4() {
-    /*glBindTexture(GL_TEXTURE_2D, texture[0]);
+
+
+    const char *txrs[]{"texs/bricks.bmp",
+                       "texs/cloth.bmp",
+                       "texs/metal.bmp",
+                       "texs/metal2.bmp",
+                       "texs/metal3.bmp",
+                       "texs/skin.bmp",
+                       "texs/stones.bmp",
+                       "texs/wood.bmp"};
+
+    CImg<unsigned char> *src = new CImg<unsigned char>();
+
+
+    glGenTextures(8, textures);
+    for (int i = 0; i < 8; i++) {
+        src->load_bmp(txrs[i]);
+
+        texts[i].width = src->width();
+        texts[i].height = src->height();
+        texts[i].data = new unsigned char[src->size()];
+        memcpy(texts[i].data, src->data(), src->size());
+
+
+        src->clear();
+
+        glBindTexture(GL_TEXTURE_2D, textures[i]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texts[i].width, texts[i].height, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                     texts[i].data);
+    }
+
+    delete src;
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(1,1,1);
-    glTexCoord2f(0, 0);     glVertex3f(1+diverge,0+diverge,0+diverge);
-    glTexCoord2f(1, 0);     glVertex3f(0+diverge,1+diverge,0+diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f(0+diverge,0+diverge,1+diverge);
+    glNormal3f(1, 1, 1);
+    glTexCoord2f(0, 0);
+    glVertex3f(1 + diverge, 0 + diverge, 0 + diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 + diverge, 1 + diverge, 0 + diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 + diverge, 0 + diverge, 1 + diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[1]);
+
+    glBindTexture(GL_TEXTURE_2D, textures[1]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(-1,1,-1);
-    glTexCoord2f(0, 0);     glVertex3f( 1+diverge, 0-diverge, 0+diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0+diverge,-1-diverge, 0+diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0+diverge, 0-diverge, 1+diverge);
+    glNormal3f(-1, 1, -1);
+    glTexCoord2f(0, 0);
+    glVertex3f(1 + diverge, 0 - diverge, 0 + diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 + diverge, -1 - diverge, 0 + diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 + diverge, 0 - diverge, 1 + diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[2]);
+    glBindTexture(GL_TEXTURE_2D, textures[2]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(-1,-1,1);
-    glTexCoord2f(0, 0);     glVertex3f(-1-diverge, 0-diverge, 0+diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0-diverge,-1-diverge, 0+diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0-diverge, 0-diverge, 1+diverge);
+    glNormal3f(-1, -1, 1);
+    glTexCoord2f(0, 0);
+    glVertex3f(-1 - diverge, 0 - diverge, 0 + diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 - diverge, -1 - diverge, 0 + diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 - diverge, 0 - diverge, 1 + diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[3]);
+    glBindTexture(GL_TEXTURE_2D, textures[3]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(1,-1,-1);
-    glTexCoord2f(0, 0);     glVertex3f(-1-diverge, 0+diverge, 0+diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0-diverge, 1+diverge, 0+diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0-diverge, 0+diverge, 1+diverge);
+    glNormal3f(1, -1, -1);
+    glTexCoord2f(0, 0);
+    glVertex3f(-1 - diverge, 0 + diverge, 0 + diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 - diverge, 1 + diverge, 0 + diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 - diverge, 0 + diverge, 1 + diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[4]);
+    glBindTexture(GL_TEXTURE_2D, textures[4]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(-1,-1,1);
-    glTexCoord2f(0, 0);     glVertex3f( 1+diverge, 0+diverge, 0-diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0+diverge, 1+diverge, 0-diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0+diverge, 0+diverge,-1-diverge);
+    glNormal3f(-1, -1, 1);
+    glTexCoord2f(0, 0);
+    glVertex3f(1 + diverge, 0 + diverge, 0 - diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 + diverge, 1 + diverge, 0 - diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 + diverge, 0 + diverge, -1 - diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[5]);
+    glBindTexture(GL_TEXTURE_2D, textures[5]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(1,-1,-1);
-    glTexCoord2f(0, 0);     glVertex3f( 1+diverge, 0-diverge, 0-diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0+diverge,-1-diverge, 0-diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0+diverge, 0-diverge,-1-diverge);
+    glNormal3f(1, -1, -1);
+    glTexCoord2f(0, 0);
+    glVertex3f(1 + diverge, 0 - diverge, 0 - diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 + diverge, -1 - diverge, 0 - diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 + diverge, 0 - diverge, -1 - diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[6]);
+    glBindTexture(GL_TEXTURE_2D, textures[6]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(1,1,1);
-    glTexCoord2f(0, 0);     glVertex3f(-1-diverge, 0-diverge, 0-diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0-diverge,-1-diverge, 0-diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0-diverge, 0-diverge,-1-diverge);
+    glNormal3f(1, 1, 1);
+    glTexCoord2f(0, 0);
+    glVertex3f(-1 - diverge, 0 - diverge, 0 - diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 - diverge, -1 - diverge, 0 - diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 - diverge, 0 - diverge, -1 - diverge);
     glEnd();
 
-    glBindTexture(GL_TEXTURE_2D, texture[7]);
+    glBindTexture(GL_TEXTURE_2D, textures[7]);
     glBegin(GL_TRIANGLES);
-    glNormal3f(-1,1,-1);
-    glTexCoord2f(0, 0);     glVertex3f(-1-diverge, 0+diverge, 0-diverge);
-    glTexCoord2f(1, 0);     glVertex3f( 0-diverge, 1+diverge, 0-diverge);
-    glTexCoord2f(0.5, 1);   glVertex3f( 0-diverge, 0+diverge,-1-diverge);
-    glEnd();*/
+    glNormal3f(-1, 1, -1);
+    glTexCoord2f(0, 0);
+    glVertex3f(-1 - diverge, 0 + diverge, 0 - diverge);
+    glTexCoord2f(1, 0);
+    glVertex3f(0 - diverge, 1 + diverge, 0 - diverge);
+    glTexCoord2f(0.5, 1);
+    glVertex3f(0 - diverge, 0 + diverge, -1 - diverge);
+
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
 }
 
 void display(void) {
@@ -232,7 +304,6 @@ void display(void) {
 
     glPushMatrix();
     glLoadIdentity(); // единичная матрица
-
 
     glTranslatef(0, 0, shift);
     glRotatef(lght_rot, 0.0, 1.0, 0.0);
@@ -243,6 +314,7 @@ void display(void) {
     gluQuadricDrawStyle(quad, GLU_LINE);
     gluSphere(quad, 0.25, 10, 10);
 
+
     glPopMatrix();
 
     if(rotated) {
@@ -250,7 +322,11 @@ void display(void) {
         glRotatef(angle_y, 0.0, 1.0, 0.0);
     }
 
-    draw3();
+    glColor4f(1.0,1.0,1.0,1.0);
+
+
+    draw4();
+
 
     glColor4f(1.0,1.0,1.0, AlphaChannel);
 
@@ -304,7 +380,7 @@ void keyboard(unsigned char key, int x, int y) {
                 break;
             }
         case 'f':
-            AlphaChannel == 1.f ? AlphaChannel = 0.5f : AlphaChannel = 1.f;
+            AlphaChannel == 1.f ? AlphaChannel = 0.2f : AlphaChannel = 1.f;
             break;
         case 'c' :
             display_cube = !display_cube;
@@ -325,69 +401,6 @@ void loop(int time) {
     glutPostRedisplay();
     glutTimerFunc(30, loop, 1);
 }
-
-void loadTextures() {
-    /*AUX_RGBImageRec *texture1;
-    texture1 = auxDIBImageLoad("texs/bricks.jpg");
-    glGenTextures(1, &texture[0]);
-    glBindTexture(GL_TEXTURE_2D, texture[0]);
-
-    AUX_RGBImageRec *texture2;
-    texture1 = auxDIBImageLoad("Data/cloth.jpg");
-    glGenTextures(2, &texture[1]);
-    glBindTexture(GL_TEXTURE_2D, texture[1]);
-
-    AUX_RGBImageRec *texture3;
-    texture1 = auxDIBImageLoad("Data/metal.jpg");
-    glGenTextures(3, &texture[2]);
-    glBindTexture(GL_TEXTURE_2D, texture[2]);
-
-    AUX_RGBImageRec *texture4;
-    texture1 = auxDIBImageLoad("Data/metal.jpg");
-    glGenTextures(4, &texture[3]);
-    glBindTexture(GL_TEXTURE_2D, texture[3]);
-
-    AUX_RGBImageRec *texture5;
-    texture1 = auxDIBImageLoad("Data/metal2.jpg");
-    glGenTextures(5, &texture[4]);
-    glBindTexture(GL_TEXTURE_2D, texture[4]);
-
-    AUX_RGBImageRec *texture6;
-    texture1 = auxDIBImageLoad("Data/metal3.jpg");
-    glGenTextures(6, &texture[5]);
-    glBindTexture(GL_TEXTURE_2D, texture[5]);
-
-    AUX_RGBImageRec *texture7;
-    texture1 = auxDIBImageLoad("Data/wood.jpg");
-    glGenTextures(7, &texture[6]);
-    glBindTexture(GL_TEXTURE_2D, texture[6]);
-
-    AUX_RGBImageRec *texture8;
-    texture1 = auxDIBImageLoad("Data/stones.jpg");
-    glGenTextures(8, &texture[7]);
-    glBindTexture(GL_TEXTURE_2D, texture[7]);
-
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture1->sizeX, texture1->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture1->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture2->sizeX, texture2->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture2->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture3->sizeX, texture3->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture3->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture4->sizeX, texture4->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture4->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture5->sizeX, texture5->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture5->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture6->sizeX, texture6->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture6->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture7->sizeX, texture7->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture7->data);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture8->sizeX, texture8->sizeY, 0,
-                 GL_RGB, GL_UNSIGNED_BYTE, texture8->data);*/
-}
-
 
 
 
