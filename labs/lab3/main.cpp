@@ -86,8 +86,8 @@ void init() {
     glLightfv(GL_LIGHT0, GL_POSITION, lght_pos);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-    glEnable(GL_BLEND); //Enable blending.
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     cube = glGenLists(1);
     draw_cube();
